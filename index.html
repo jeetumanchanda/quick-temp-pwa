@@ -1,182 +1,154 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Weather PWA</title>
-  <style>
-    body {
-      background-color: #121212;
-      color: white;
-      font-family: Arial, sans-serif;
-      text-align: center;
-      padding: 20px;
-      margin: 0;
-    }
-    .icon {
-      width: 80px;
-      margin-top: 15px;
-      /* no filter -> show original icon colors */
-    }
-    #location {
-      font-size: 1.2em;  /* smaller location */
-      margin: 8px 0;
-    }
-    .temp {
-      font-size: 3.5em;  /* larger temperature */
-      margin: 10px 0;
-      font-weight: bold;
-    }
-    .info-line {
-      font-size: 1.3em;   /* a bit smaller than temperature */
-      margin-top: 6px;
-      display: inline-block;
-      white-space: nowrap; /* prevents breaking around the pipe */
-    }
-    .update-time {
-      margin-top: 10px;
-      font-size: 1em;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-    }
-    button {
-      background: transparent;
-      border: 2px solid white;
-      color: white;
-      padding: 8px 14px;
-      font-size: 1.2em;      /* larger buttons only */
-      cursor: pointer;
-      margin: 5px;
-      border-radius: 6px;
-    }
-    button:hover {
-      background-color: rgba(255,255,255,0.2);
-    }
-    .credit {
-      margin-top: 15px;
-      font-size: 0.8em;
-      color: #888;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather PWA</title>
+    <style>
+        body {
+            background-color: #121212;
+            color: white;
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+        }
+        .icon {
+            width: 80px;
+            margin-top: 15px;
+        }
+        #location {
+            font-size: 1.2em;
+            margin: 8px 0;
+        }
+        .temp {
+            font-size: 3.5em;
+            margin: 10px 0;
+        }
+        .humidity-aqi {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            font-size: 1.3em;
+            margin: 5px 0;
+        }
+        .update-time {
+            margin-top: 10px;
+            font-size: 1em;
+        }
+        button {
+            background-color: transparent;
+            border: 2px solid white;
+            color: white;
+            padding: 8px 14px;
+            font-size: 1.2em;
+            cursor: pointer;
+            margin: 5px;
+            border-radius: 6px;
+        }
+        button:hover {
+            background-color: rgba(255,255,255,0.2);
+        }
+        .credit {
+            margin-top: 15px;
+            font-size: 0.8em;
+            color: #888;
+        }
+    </style>
 </head>
 <body>
-  <!-- Use your existing icon file -->
-  <img src="icons/icon-512x512.png" class="icon" alt="Thermometer" />
+    <img src="icons/icon-512x512.png" class="icon" alt="Thermometer">
+    <h1 id="location">Loading location...</h1>
+    <div class="temp" id="temperature">--°C</div>
+    <div class="humidity-aqi">
+        <span id="humidity">--%</span> <span>Humidity</span>
+        <span>|</span>
+        <span id="aqi">--</span> <span id="aqiLabel">AQI</span>
+    </div>
+    <div class="update-time">
+        Updated: <span id="lastUpdated">--:--:--</span>
+        <button id="refreshBtn">⟳</button>
+    </div>
+    <div>
+        <button id="decreaseInterval">▼</button>
+        <span id="intervalDisplay">60s</span>
+        <button id="increaseInterval">▲</button>
+    </div>
+    <div class="credit">APP-BY-JEET</div>
 
-  <h1 id="location">Loading location...</h1>
+    <script>
+        const apiKey = "679bddf7884949109fa193814251408";
+        let refreshInterval = 60;
+        let intervalId;
 
-  <div class="temp" id="temperature">--°C</div>
+        function fetchWeather(lat, lon) {
+            fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`)
+                .then(res => res.json())
+                .then(locData => {
+                    let addr = locData.address;
+                    let name = addr.city || addr.town || addr.village || addr.hamlet || addr.suburb || addr.locality || addr.county || addr.state || "Unknown";
+                    let state = addr.state || "";
+                    document.getElementById('location').innerText = state && name !== state ? `${name}, ${state}` : name;
+                });
 
-  <!-- Labels inline with values, single centered pipe -->
-  <div class="info-line" id="humidAqiLine">Humidity: --% | AQI: --</div>
+            fetch(`https://api.weatherapi.com/v1/current.json?key=${apiKey}&q=${lat},${lon}&aqi=yes`)
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('temperature').innerText = `${data.current.temp_c}°C`;
+                    document.getElementById('humidity').innerText = `${data.current.humidity}%`;
 
-  <div class="update-time">
-    <span>Updated: <span id="lastUpdated">--:--:--</span></span>
-    <button id="refreshBtn">⟳</button>
-  </div>
+                    let aqiValue = data.current.air_quality["pm2_5"];
+                    let aqiCategory = getAQICategory(aqiValue);
+                    document.getElementById('aqi').innerText = `${Math.round(aqiValue)}`;
+                    document.getElementById('aqiLabel').innerText = `(${aqiCategory})`;
 
-  <div>
-    <button id="decreaseInterval">▼</button>
-    <span id="intervalDisplay">60s</span>
-    <button id="increaseInterval">▲</button>
-  </div>
+                    let now = new Date();
+                    document.getElementById('lastUpdated').innerText =
+                        now.toLocaleTimeString();
+                })
+                .catch(() => {
+                    document.getElementById('temperature').innerText = "--°C";
+                    document.getElementById('humidity').innerText = "--%";
+                    document.getElementById('aqi').innerText = "--";
+                    document.getElementById('aqiLabel').innerText = "AQI";
+                });
+        }
 
-  <div class="credit">APP-BY-JEET</div>
+        function getAQICategory(aqi) {
+            if (aqi <= 50) return "Good";
+            if (aqi <= 100) return "Moderate";
+            if (aqi <= 150) return "Unhealthy (SG)";
+            if (aqi <= 200) return "Unhealthy";
+            if (aqi <= 300) return "Very Unhealthy";
+            return "Hazardous";
+        }
 
-  <script>
-    const apiKey = "679bddf7884949109fa193814251408";
-    let refreshInterval = 60;
-    let intervalId;
+        function updateWeather() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(pos => {
+                    fetchWeather(pos.coords.latitude, pos.coords.longitude);
+                });
+            }
+        }
 
-    // AQI category text (kept monochrome, text only)
-    function aqiCategory(aqi) {
-      if (aqi == null || isNaN(aqi)) return "";
-      if (aqi <= 50) return "Good";
-      if (aqi <= 100) return "Moderate";
-      if (aqi <= 150) return "Unhealthy (SG)";
-      if (aqi <= 200) return "Unhealthy";
-      if (aqi <= 300) return "Very Unhealthy";
-      return "Hazardous";
-    }
-
-    function fetchWeather(lat, lon) {
-      // Reverse-geocode for a sensible nearby name
-      fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`)
-        .then(r => r.json())
-        .then(loc => {
-          const a = loc.address || {};
-          const name =
-            a.city || a.town || a.village || a.hamlet || a.suburb ||
-            a.locality || a.county || a.state || "Unknown";
-          const state = a.state || "";
-          document.getElementById("location").innerText =
-            state && name !== state ? `${name}, ${state}` : name;
-        })
-        .catch(() => {
-          document.getElementById("location").innerText = "Unknown";
+        document.getElementById('refreshBtn').addEventListener('click', updateWeather);
+        document.getElementById('increaseInterval').addEventListener('click', () => {
+            refreshInterval += 10;
+            document.getElementById('intervalDisplay').innerText = `${refreshInterval}s`;
+            restartAutoRefresh();
+        });
+        document.getElementById('decreaseInterval').addEventListener('click', () => {
+            if (refreshInterval > 10) refreshInterval -= 10;
+            document.getElementById('intervalDisplay').innerText = `${refreshInterval}s`;
+            restartAutoRefresh();
         });
 
-      // Weather data (temp, humidity, AQI)
-      fetch(`https://api.weatherapi.com/v1/current.json?key=${apiKey}&q=${lat},${lon}&aqi=yes`)
-        .then(r => r.json())
-        .then(data => {
-          const t = data.current?.temp_c;
-          const h = data.current?.humidity;
-          const pm25 = data.current?.air_quality?.["pm2_5"];
-          const cat = aqiCategory(pm25);
+        function restartAutoRefresh() {
+            clearInterval(intervalId);
+            intervalId = setInterval(updateWeather, refreshInterval * 1000);
+        }
 
-          document.getElementById("temperature").innerText =
-            (t != null ? `${t}°C` : "--°C`);
-
-          const aqiText =
-            (pm25 != null && !isNaN(pm25))
-              ? `${Math.round(pm25)}${cat ? " (" + cat + ")" : ""}`
-              : `--`;
-
-          document.getElementById("humidAqiLine").innerText =
-            `Humidity: ${h != null ? h : "--"}% | AQI: ${aqiText}`;
-
-          document.getElementById("lastUpdated").innerText =
-            new Date().toLocaleTimeString();
-        })
-        .catch(() => {
-          document.getElementById("temperature").innerText = "--°C";
-          document.getElementById("humidAqiLine").innerText =
-            "Humidity: --% | AQI: --";
-        });
-    }
-
-    function updateWeather() {
-      if (!navigator.geolocation) return;
-      navigator.geolocation.getCurrentPosition(
-        pos => fetchWeather(pos.coords.latitude, pos.coords.longitude),
-        () => { /* ignore for now */ }
-      );
-    }
-
-    // Controls
-    document.getElementById("refreshBtn").addEventListener("click", updateWeather);
-    document.getElementById("increaseInterval").addEventListener("click", () => {
-      refreshInterval += 10;
-      document.getElementById("intervalDisplay").innerText = `${refreshInterval}s`;
-      restartAutoRefresh();
-    });
-    document.getElementById("decreaseInterval").addEventListener("click", () => {
-      if (refreshInterval > 10) refreshInterval -= 10;
-      document.getElementById("intervalDisplay").innerText = `${refreshInterval}s`;
-      restartAutoRefresh();
-    });
-
-    function restartAutoRefresh() {
-      clearInterval(intervalId);
-      intervalId = setInterval(updateWeather, refreshInterval * 1000);
-    }
-
-    // Init
-    updateWeather();
-    restartAutoRefresh();
-  </script>
+        updateWeather();
+        restartAutoRefresh();
+    </script>
 </body>
 </html>
