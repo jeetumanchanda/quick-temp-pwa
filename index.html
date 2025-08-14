@@ -6,160 +6,131 @@
 <title>Quick Temp</title>
 <link rel="manifest" href="manifest.json">
 <style>
-  body {
-    margin: 0;
-    background-color: #121212;
-    color: white;
-    font-family: sans-serif;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100vh;
-    text-align: center;
-  }
-  .icon {
-    width: 100px;
-    height: 100px;
-    margin-bottom: 10px;
-  }
-  .temp {
-    font-size: 6em;
-    font-weight: bold;
-  }
-  .condition {
-    font-size: 2em;
-    color: #bbb;
-  }
-  .location {
-    font-size: 1.5em;
-    margin-top: 10px;
-    color: #aaa;
-  }
-  .coords {
-    font-size: 1.3em;
-    margin-top: 5px;
-    color: #888;
-  }
-  .updated {
-    font-size: 1.3em;
-    margin-top: 15px;
-    color: #888;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-  .refresh-btn {
-    background: none;
-    border: none;
-    color: #4FC3F7;
-    font-size: 2em;
-    cursor: pointer;
-  }
-  .interval-controls {
-    margin-top: 12px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-  }
-  .interval-display {
-    font-size: 1.3em;
-    color: #aaa;
-  }
-  .interval-arrows button {
-    background: none;
-    border: none;
-    color: #4FC3F7;
-    font-size: 1.8em;
-    cursor: pointer;
-    margin: 2px;
-  }
-  .credit {
-    position: absolute;
-    bottom: 10px;
-    font-size: 0.9em;
-    color: #666;
-  }
+    body {
+        font-family: Arial, sans-serif;
+        background-color: #121212;
+        color: white;
+        text-align: center;
+        margin: 0;
+        padding: 0;
+    }
+    .icon {
+        width: 80px;
+        margin-top: 20px;
+    }
+    h1 {
+        margin: 10px 0;
+        font-size: 1.5rem;
+    }
+    .temperature {
+        font-size: 3rem;
+        margin: 10px 0;
+    }
+    .info {
+        font-size: 1rem;
+        margin: 5px 0;
+    }
+    .updated {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        margin-top: 10px;
+    }
+    .refresh-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 1.5rem; /* larger */
+        padding: 8px;
+        border-radius: 6px;
+        background-color: #1e1e1e;
+    }
+    .interval-controls {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 6px;
+        margin-top: 8px;
+    }
+    .interval-btn {
+        background-color: #1e1e1e;
+        border: none;
+        color: white;
+        font-size: 1.2rem; /* larger */
+        padding: 8px 12px;
+        cursor: pointer;
+        border-radius: 6px;
+    }
+    .credit {
+        font-size: 0.8rem;
+        margin-top: 15px;
+        opacity: 0.7;
+    }
 </style>
 </head>
 <body>
-  <img src="icons/icon-192x192.png" alt="Thermometer" class="icon">
-  <div class="temp">--°C</div>
-  <div class="condition">Loading...</div>
-  <div class="location"></div>
-  <div class="coords"></div>
-  <div class="updated">
-    <span class="updated-time"></span>
-    <button class="refresh-btn" onclick="refreshWeather()">⟳</button>
-  </div>
-  <div class="interval-controls">
-    <div class="interval-display">Auto-refresh: <span id="interval-value">60</span>s</div>
-    <div class="interval-arrows">
-      <button onclick="changeInterval(10)">▲</button>
-      <button onclick="changeInterval(-10)">▼</button>
+    <img src="icons/icon-192x192.png" alt="Thermometer" class="icon">
+    <h1 id="location">Loading location...</h1>
+    <div class="temperature" id="temperature">-- °C</div>
+    <div class="info" id="coords"></div>
+    <div class="info" id="condition"></div>
+    <div class="updated">
+        <span id="updatedTime">Updated: --:--:--</span>
+        <button class="refresh-btn" onclick="fetchWeather()">🔄</button>
     </div>
-  </div>
-  <div class="credit">APP-BY-JEET</div>
+    <div class="interval-controls">
+        <button class="interval-btn" onclick="changeInterval(-10)">▼</button>
+        <span id="intervalDisplay">60s</span>
+        <button class="interval-btn" onclick="changeInterval(10)">▲</button>
+    </div>
+    <div class="credit">APP-BY-JEET</div>
 
 <script>
-const apiKey = "679bddf7884949109fa193814251408";
-let currentLat, currentLon;
-let refreshInterval = 60; // seconds
-let refreshTimer;
+const API_KEY = "679bddf7884949109fa193814251408";
+let refreshInterval = 60;
+let intervalTimer;
 
-function fetchWeather(lat, lon) {
-  currentLat = lat;
-  currentLon = lon;
-  fetch(`https://api.weatherapi.com/v1/current.json?key=${apiKey}&q=${lat},${lon}&aqi=no`)
-    .then(res => res.json())
-    .then(data => {
-      document.querySelector(".temp").textContent = `${Math.round(data.current.temp_c)}°C`;
-      document.querySelector(".condition").textContent = data.current.condition.text;
-      document.querySelector(".location").textContent = `${data.location.name}, ${data.location.region}`;
-      document.querySelector(".coords").textContent = `Latitude: ${lat.toFixed(4)}, Longitude: ${lon.toFixed(4)}`;
-      document.querySelector(".updated-time").textContent = "Updated: " + new Date().toLocaleTimeString();
-    })
-    .catch(() => {
-      document.querySelector(".condition").textContent = "Error fetching weather";
-    });
-}
-
-function refreshWeather() {
-  if (currentLat && currentLon) {
-    fetchWeather(currentLat, currentLon);
-  } else if ("geolocation" in navigator) {
-    navigator.geolocation.getCurrentPosition(
-      pos => fetchWeather(pos.coords.latitude, pos.coords.longitude),
-      () => {
-        document.querySelector(".condition").textContent = "Location denied";
-      }
-    );
-  }
+function updateTimeDisplay() {
+    document.getElementById('intervalDisplay').innerText = refreshInterval + "s";
 }
 
 function changeInterval(change) {
-  refreshInterval = Math.max(10, refreshInterval + change);
-  document.getElementById("interval-value").textContent = refreshInterval;
-  resetAutoRefresh();
+    refreshInterval = Math.max(10, refreshInterval + change);
+    updateTimeDisplay();
+    startAutoRefresh();
 }
 
-function resetAutoRefresh() {
-  if (refreshTimer) clearInterval(refreshTimer);
-  refreshTimer = setInterval(refreshWeather, refreshInterval * 1000);
+function startAutoRefresh() {
+    if (intervalTimer) clearInterval(intervalTimer);
+    intervalTimer = setInterval(fetchWeather, refreshInterval * 1000);
 }
 
-if ("geolocation" in navigator) {
-  navigator.geolocation.getCurrentPosition(
-    pos => {
-      fetchWeather(pos.coords.latitude, pos.coords.longitude);
-      resetAutoRefresh();
-    },
-    err => {
-      document.querySelector(".condition").textContent = "Location denied";
+function fetchWeather() {
+    if (!navigator.geolocation) {
+        alert("Geolocation not supported");
+        return;
     }
-  );
+    navigator.geolocation.getCurrentPosition(pos => {
+        const lat = pos.coords.latitude.toFixed(4);
+        const lon = pos.coords.longitude.toFixed(4);
+        fetch(`https://api.weatherapi.com/v1/current.json?key=${API_KEY}&q=${lat},${lon}&aqi=no`)
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('location').innerText = data.location.name + ", " + data.location.region;
+                document.getElementById('temperature').innerText = data.current.temp_c + " °C";
+                document.getElementById('coords').innerText = `Latitude: ${lat}, Longitude: ${lon}`;
+                document.getElementById('condition').innerText = data.current.condition.text;
+                const now = new Date();
+                document.getElementById('updatedTime').innerText = "Updated: " + now.toLocaleTimeString();
+            })
+            .catch(err => console.error(err));
+    });
 }
+
+updateTimeDisplay();
+fetchWeather();
+startAutoRefresh();
 </script>
 </body>
 </html>
