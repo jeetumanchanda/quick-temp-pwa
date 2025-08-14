@@ -26,17 +26,36 @@
     font-size: 2em;
     color: #bbb;
   }
+  .location {
+    font-size: 1.2em;
+    margin-top: 10px;
+    color: #aaa;
+  }
+  .coords {
+    font-size: 1em;
+    margin-top: 5px;
+    color: #888;
+  }
   .updated {
     font-size: 0.9em;
     margin-top: 10px;
     color: #888;
+  }
+  .credit {
+    position: absolute;
+    bottom: 10px;
+    font-size: 0.8em;
+    color: #666;
   }
 </style>
 </head>
 <body>
   <div class="temp">--°C</div>
   <div class="condition">Loading...</div>
+  <div class="location"></div>
+  <div class="coords"></div>
   <div class="updated"></div>
+  <div class="credit">APP-BY-JEET</div>
 
 <script>
 const apiKey = "679bddf7884949109fa193814251408";
@@ -47,6 +66,8 @@ function fetchWeather(lat, lon) {
     .then(data => {
       document.querySelector(".temp").textContent = `${Math.round(data.current.temp_c)}°C`;
       document.querySelector(".condition").textContent = data.current.condition.text;
+      document.querySelector(".location").textContent = `${data.location.name}, ${data.location.region}`;
+      document.querySelector(".coords").textContent = `Lat: ${lat.toFixed(4)}, Lon: ${lon.toFixed(4)}`;
       document.querySelector(".updated").textContent = "Updated: " + new Date().toLocaleTimeString();
     })
     .catch(() => {
