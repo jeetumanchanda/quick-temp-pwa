@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quick Temp</title>
+<link rel="manifest" href="manifest.json">
+<style>
+  body {
+    margin: 0;
+    background-color: #121212;
+    color: white;
+    font-family: sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    text-align: center;
+  }
+  .temp {
+    font-size: 5em;
+    font-weight: bold;
+  }
+  .condition {
+    font-size: 2em;
+    color: #bbb;
+  }
+  .updated {
+    font-size: 0.9em;
+    margin-top: 10px;
+    color: #888;
+  }
+</style>
+</head>
+<body>
+  <div class="temp">--°C</div>
+  <div class="condition">Loading...</div>
+  <div class="updated"></div>
+
+<script>
+const apiKey = "679bddf7884949109fa193814251408";
+
+function fetchWeather(lat, lon) {
+  fetch(`https://api.weatherapi.com/v1/current.json?key=${apiKey}&q=${lat},${lon}&aqi=no`)
+    .then(res => res.json())
+    .then(data => {
+      document.querySelector(".temp").textContent = `${Math.round(data.current.temp_c)}°C`;
+      document.querySelector(".condition").textContent = data.current.condition.text;
+      document.querySelector(".updated").textContent = "Updated: " + new Date().toLocaleTimeString();
+    })
+    .catch(() => {
+      document.querySelector(".condition").textContent = "Error fetching weather";
+    });
+}
+
+if ("geolocation" in navigator) {
+  navigator.geolocation.getCurrentPosition(
+    pos => fetchWeather(pos.coords.latitude, pos.coords.longitude),
+    err => {
+      document.querySelector(".condition").textContent = "Location denied";
+    }
+  );
+}
+</script>
+</body>
+</html>
