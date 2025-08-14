@@ -19,7 +19,7 @@
     text-align: center;
   }
   .temp {
-    font-size: 5em;
+    font-size: 6em;
     font-weight: bold;
   }
   .condition {
@@ -40,6 +40,34 @@
     font-size: 0.9em;
     margin-top: 10px;
     color: #888;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .refresh-btn {
+    background: none;
+    border: none;
+    color: #4FC3F7;
+    font-size: 1em;
+    cursor: pointer;
+  }
+  .interval-controls {
+    margin-top: 5px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+  }
+  .interval-display {
+    font-size: 0.9em;
+    color: #aaa;
+  }
+  .interval-arrows button {
+    background: none;
+    border: none;
+    color: #4FC3F7;
+    font-size: 1em;
+    cursor: pointer;
   }
   .credit {
     position: absolute;
@@ -54,30 +82,72 @@
   <div class="condition">Loading...</div>
   <div class="location"></div>
   <div class="coords"></div>
-  <div class="updated"></div>
+  <div class="updated">
+    <span class="updated-time"></span>
+    <button class="refresh-btn" onclick="refreshWeather()">⟳</button>
+  </div>
+  <div class="interval-controls">
+    <div class="interval-display">Auto-refresh: <span id="interval-value">60</span>s</div>
+    <div class="interval-arrows">
+      <button onclick="changeInterval(10)">▲</button>
+      <button onclick="changeInterval(-10)">▼</button>
+    </div>
+  </div>
   <div class="credit">APP-BY-JEET</div>
 
 <script>
 const apiKey = "679bddf7884949109fa193814251408";
+let currentLat, currentLon;
+let refreshInterval = 60; // seconds
+let refreshTimer;
 
 function fetchWeather(lat, lon) {
+  currentLat = lat;
+  currentLon = lon;
   fetch(`https://api.weatherapi.com/v1/current.json?key=${apiKey}&q=${lat},${lon}&aqi=no`)
     .then(res => res.json())
     .then(data => {
       document.querySelector(".temp").textContent = `${Math.round(data.current.temp_c)}°C`;
       document.querySelector(".condition").textContent = data.current.condition.text;
       document.querySelector(".location").textContent = `${data.location.name}, ${data.location.region}`;
-      document.querySelector(".coords").textContent = `Lat: ${lat.toFixed(4)}, Lon: ${lon.toFixed(4)}`;
-      document.querySelector(".updated").textContent = "Updated: " + new Date().toLocaleTimeString();
+      document.querySelector(".coords").textContent = `Latitude: ${lat.toFixed(4)}, Longitude: ${lon.toFixed(4)}`;
+      document.querySelector(".updated-time").textContent = "Updated: " + new Date().toLocaleTimeString();
     })
     .catch(() => {
       document.querySelector(".condition").textContent = "Error fetching weather";
     });
 }
 
+function refreshWeather() {
+  if (currentLat && currentLon) {
+    fetchWeather(currentLat, currentLon);
+  } else if ("geolocation" in navigator) {
+    navigator.geolocation.getCurrentPosition(
+      pos => fetchWeather(pos.coords.latitude, pos.coords.longitude),
+      () => {
+        document.querySelector(".condition").textContent = "Location denied";
+      }
+    );
+  }
+}
+
+function changeInterval(change) {
+  refreshInterval = Math.max(10, refreshInterval + change);
+  document.getElementById("interval-value").textContent = refreshInterval;
+  resetAutoRefresh();
+}
+
+function resetAutoRefresh() {
+  if (refreshTimer) clearInterval(refreshTimer);
+  refreshTimer = setInterval(refreshWeather, refreshInterval * 1000);
+}
+
 if ("geolocation" in navigator) {
   navigator.geolocation.getCurrentPosition(
-    pos => fetchWeather(pos.coords.latitude, pos.coords.longitude),
+    pos => {
+      fetchWeather(pos.coords.latitude, pos.coords.longitude);
+      resetAutoRefresh();
+    },
     err => {
       document.querySelector(".condition").textContent = "Location denied";
     }
