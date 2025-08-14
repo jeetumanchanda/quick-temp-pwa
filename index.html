@@ -16,7 +16,8 @@
     }
     .icon {
         width: 80px;
-        margin-top: 20px;
+        margin-top: 15px;
+        filter: brightness(0) invert(1); /* make icon white in dark theme */
     }
     .temperature {
         font-size: 48px;
@@ -46,12 +47,15 @@
     button {
         padding: 10px 14px;
         margin: 3px;
-        border: none;
+        border: 1px solid #bbb;
         border-radius: 6px;
-        background-color: #1e88e5;
+        background-color: transparent;
         color: white;
         cursor: pointer;
         font-size: 18px;
+    }
+    button:hover {
+        background-color: rgba(255,255,255,0.1);
     }
     .interval-controls {
         margin-top: 4px;
