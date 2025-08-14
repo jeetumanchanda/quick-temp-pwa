@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Quick Temp</title>
+<title>Weather App</title>
 <link rel="manifest" href="manifest.json">
 <style>
     body {
@@ -12,138 +12,161 @@
         font-family: Arial, sans-serif;
         text-align: center;
         margin: 0;
-        padding: 0;
+        padding: 20px;
     }
-    h1 {
-        font-size: 1.5rem;
-        margin-top: 10px;
-    }
-    #temperature {
-        font-size: 3rem;
+    .temperature {
+        font-size: 48px;
         margin: 10px 0;
     }
-    #humidityAqi {
-        font-size: 1.2rem;
-        color: #ccc;
-        margin-bottom: 10px;
-    }
-    .info {
-        font-size: 1rem;
-        margin: 5px 0;
-    }
-    button {
-        background-color: #333;
-        color: white;
-        border: none;
-        padding: 12px 20px;
-        margin: 5px;
-        cursor: pointer;
-        font-size: 1.5rem;
-        border-radius: 6px;
-    }
-    button:hover {
-        background-color: #555;
-    }
-    .small-btn {
-        padding: 10px 16px;
-        font-size: 1.2rem;
-    }
-    .update-container {
+    .secondary {
+        font-size: 18px;
+        margin-top: 8px;
         display: flex;
         justify-content: center;
+        gap: 30px;
+    }
+    .secondary-value {
+        font-size: 20px;
+        font-weight: bold;
+    }
+    .secondary-label {
+        font-size: 12px;
+        opacity: 0.8;
+    }
+    .coords, .condition, .updated, .credit {
+        margin-top: 8px;
+    }
+    button {
+        background-color: #1e88e5;
+        border: none;
+        color: white;
+        padding: 10px 14px;
+        margin: 4px;
+        font-size: 18px;
+        border-radius: 6px;
+        cursor: pointer;
+    }
+    button:hover {
+        background-color: #1565c0;
+    }
+    .inline {
+        display: inline-flex;
         align-items: center;
         gap: 8px;
-        margin: 10px 0;
-    }
-    .interval-controls {
-        margin-top: 5px;
     }
 </style>
 </head>
 <body>
+    <h2 id="location">Loading location...</h2>
+    <div class="temperature" id="temperature">-- °C</div>
 
-<img src="icons/icon-192x192.png" alt="Thermometer" width="80" style="margin-top:15px;">
-<h1 id="location">Loading...</h1>
-<div id="temperature">-- °C</div>
-<div id="humidityAqi">Humidity: --% | AQI: -- (--)</div>
-<div class="info" id="coords"></div>
-<div class="info" id="condition"></div>
+    <div class="secondary">
+        <div>
+            <div class="secondary-value" id="humidity">--%</div>
+            <div class="secondary-label">Humidity</div>
+        </div>
+        <div>
+            <div class="secondary-value" id="aqi">--</div>
+            <div class="secondary-label">AQI</div>
+        </div>
+    </div>
 
-<div class="update-container">
-    <div id="updatedTime">Updated: --:--:--</div>
-    <button id="refreshBtn">⟳</button>
-</div>
+    <div class="coords" id="coords"></div>
+    <div class="condition" id="condition"></div>
 
-<div class="interval-controls">
-    <button id="decreaseInterval" class="small-btn">▼</button>
-    <span id="intervalDisplay">60s</span>
-    <button id="increaseInterval" class="small-btn">▲</button>
-</div>
+    <div class="updated">
+        <span class="inline">
+            <span id="updatedTime">Updated: --:--:--</span>
+            <button id="refreshBtn">🔄</button>
+        </span>
+    </div>
 
-<div style="margin-top:15px; font-size:0.9rem;">APP-BY-JEET</div>
+    <div style="margin-top:8px;">
+        <button id="decreaseInterval">➖</button>
+        <span id="intervalDisplay">60s</span>
+        <button id="increaseInterval">➕</button>
+    </div>
+
+    <div class="credit">APP-BY-JEET</div>
 
 <script>
-const API_KEY = "679bddf7884949109fa193814251408"; // your key
-let refreshInterval = 60; // seconds
-let autoRefreshTimer;
+    const API_KEY = "679bddf7884949109fa193814251408";
+    let autoRefreshInterval = 60;
+    let intervalId;
 
-function getAqiCategory(aqi) {
-    if (aqi <= 50) return "Good";
-    if (aqi <= 100) return "Moderate";
-    if (aqi <= 150) return "Unhealthy for Sensitive Groups";
-    if (aqi <= 200) return "Unhealthy";
-    if (aqi <= 300) return "Very Unhealthy";
-    return "Hazardous";
-}
-
-function fetchWeather() {
-    navigator.geolocation.getCurrentPosition(pos => {
-        const lat = pos.coords.latitude;
-        const lon = pos.coords.longitude;
-
-        fetch(`https://api.weatherapi.com/v1/current.json?key=${API_KEY}&q=${lat},${lon}&aqi=yes`)
-            .then(res => res.json())
-            .then(data => {
-                document.getElementById('location').innerText = data.location.name + ", " + data.location.region;
-                document.getElementById('temperature').innerText = data.current.temp_c + " °C";
-                document.getElementById('coords').innerText = `Latitude: ${lat}, Longitude: ${lon}`;
-                document.getElementById('condition').innerText = data.current.condition.text;
-
-                // Humidity and AQI in one line
-                let humidity = data.current.humidity;
-                let aqiValue = data.current.air_quality["pm2_5"];
-                let aqiCategory = getAqiCategory(aqiValue);
-                document.getElementById('humidityAqi').innerText = `Humidity: ${humidity}% | AQI: ${aqiValue.toFixed(1)} (${aqiCategory})`;
-
-                // Update time
-                const now = new Date();
-                document.getElementById('updatedTime').innerText = "Updated: " + now.toLocaleTimeString();
-            })
-            .catch(err => console.error(err));
-    });
-}
-
-function startAutoRefresh() {
-    clearInterval(autoRefreshTimer);
-    autoRefreshTimer = setInterval(fetchWeather, refreshInterval * 1000);
-}
-
-document.getElementById('refreshBtn').addEventListener('click', fetchWeather);
-document.getElementById('increaseInterval').addEventListener('click', () => {
-    refreshInterval += 10;
-    document.getElementById('intervalDisplay').innerText = refreshInterval + "s";
-    startAutoRefresh();
-});
-document.getElementById('decreaseInterval').addEventListener('click', () => {
-    if (refreshInterval > 10) {
-        refreshInterval -= 10;
-        document.getElementById('intervalDisplay').innerText = refreshInterval + "s";
-        startAutoRefresh();
+    function getAqiCategory(aqi) {
+        if (aqi <= 50) return "Good";
+        if (aqi <= 100) return "Moderate";
+        if (aqi <= 150) return "Unhealthy for Sensitive Groups";
+        if (aqi <= 200) return "Unhealthy";
+        if (aqi <= 300) return "Very Unhealthy";
+        return "Hazardous";
     }
-});
 
-fetchWeather();
-startAutoRefresh();
+    function fetchWeather(lat, lon) {
+        // Reverse geocoding for accurate location name
+        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`)
+        .then(res => res.json())
+        .then(locData => {
+            let name = locData.address.city || locData.address.town || locData.address.village || "Unknown";
+            let state = locData.address.state || "";
+            document.getElementById('location').innerText = `${name}, ${state}`;
+        });
+
+        // WeatherAPI data
+        fetch(`https://api.weatherapi.com/v1/current.json?key=${API_KEY}&q=${lat},${lon}&aqi=yes`)
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById('temperature').innerText = `${data.current.temp_c} °C`;
+            document.getElementById('coords').innerText = `Latitude: ${lat.toFixed(4)}, Longitude: ${lon.toFixed(4)}`;
+            document.getElementById('condition').innerText = data.current.condition.text;
+            document.getElementById('humidity').innerText = `${data.current.humidity}%`;
+
+            let aqiValue = data.current.air_quality["pm2_5"];
+            document.getElementById('aqi').innerText = `${aqiValue.toFixed(1)} (${getAqiCategory(aqiValue)})`;
+
+            const now = new Date();
+            document.getElementById('updatedTime').innerText = "Updated: " + now.toLocaleTimeString();
+        })
+        .catch(err => console.error(err));
+    }
+
+    function getLocationAndUpdate() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(pos => {
+                fetchWeather(pos.coords.latitude, pos.coords.longitude);
+            }, err => {
+                console.error(err);
+                document.getElementById('location').innerText = "Location access denied";
+            });
+        } else {
+            alert("Geolocation not supported");
+        }
+    }
+
+    document.getElementById('refreshBtn').addEventListener('click', getLocationAndUpdate);
+
+    document.getElementById('increaseInterval').addEventListener('click', () => {
+        autoRefreshInterval += 10;
+        document.getElementById('intervalDisplay').innerText = `${autoRefreshInterval}s`;
+        restartAutoRefresh();
+    });
+
+    document.getElementById('decreaseInterval').addEventListener('click', () => {
+        if (autoRefreshInterval > 10) {
+            autoRefreshInterval -= 10;
+            document.getElementById('intervalDisplay').innerText = `${autoRefreshInterval}s`;
+            restartAutoRefresh();
+        }
+    });
+
+    function restartAutoRefresh() {
+        clearInterval(intervalId);
+        intervalId = setInterval(getLocationAndUpdate, autoRefreshInterval * 1000);
+    }
+
+    getLocationAndUpdate();
+    restartAutoRefresh();
 </script>
 </body>
 </html>
