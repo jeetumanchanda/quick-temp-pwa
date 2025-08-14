@@ -7,120 +7,115 @@
 <link rel="manifest" href="manifest.json">
 <style>
     body {
-        font-family: Arial, sans-serif;
         background-color: #121212;
         color: white;
+        font-family: Arial, sans-serif;
         text-align: center;
         margin: 0;
         padding: 0;
     }
-    .icon {
-        width: 80px;
-        margin-top: 20px;
-    }
     h1 {
-        margin: 10px 0;
         font-size: 1.5rem;
+        margin-top: 10px;
     }
-    .temperature {
+    #temperature {
         font-size: 3rem;
         margin: 10px 0;
+    }
+    #humidityAqi {
+        font-size: 1.2rem;
+        color: #ccc;
+        margin-bottom: 10px;
     }
     .info {
         font-size: 1rem;
         margin: 5px 0;
     }
-    .updated {
+    button {
+        background-color: #333;
+        color: white;
+        border: none;
+        padding: 12px 20px;
+        margin: 5px;
+        cursor: pointer;
+        font-size: 1.5rem;
+        border-radius: 6px;
+    }
+    button:hover {
+        background-color: #555;
+    }
+    .small-btn {
+        padding: 10px 16px;
+        font-size: 1.2rem;
+    }
+    .update-container {
         display: flex;
         justify-content: center;
         align-items: center;
         gap: 8px;
-        margin-top: 10px;
-    }
-    .refresh-btn {
-        background: none;
-        border: none;
-        cursor: pointer;
-        font-size: 1.5rem; /* larger */
-        padding: 8px;
-        border-radius: 6px;
-        background-color: #1e1e1e;
+        margin: 10px 0;
     }
     .interval-controls {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        gap: 6px;
-        margin-top: 8px;
-    }
-    .interval-btn {
-        background-color: #1e1e1e;
-        border: none;
-        color: white;
-        font-size: 1.2rem; /* larger */
-        padding: 8px 12px;
-        cursor: pointer;
-        border-radius: 6px;
-    }
-    .credit {
-        font-size: 0.8rem;
-        margin-top: 15px;
-        opacity: 0.7;
+        margin-top: 5px;
     }
 </style>
 </head>
 <body>
-    <img src="icons/icon-192x192.png" alt="Thermometer" class="icon">
-    <h1 id="location">Loading location...</h1>
-    <div class="temperature" id="temperature">-- °C</div>
-    <div class="info" id="coords"></div>
-    <div class="info" id="condition"></div>
-    <div class="updated">
-        <span id="updatedTime">Updated: --:--:--</span>
-        <button class="refresh-btn" onclick="fetchWeather()">🔄</button>
-    </div>
-    <div class="interval-controls">
-        <button class="interval-btn" onclick="changeInterval(-10)">▼</button>
-        <span id="intervalDisplay">60s</span>
-        <button class="interval-btn" onclick="changeInterval(10)">▲</button>
-    </div>
-    <div class="credit">APP-BY-JEET</div>
+
+<img src="icons/icon-192x192.png" alt="Thermometer" width="80" style="margin-top:15px;">
+<h1 id="location">Loading...</h1>
+<div id="temperature">-- °C</div>
+<div id="humidityAqi">Humidity: --% | AQI: -- (--)</div>
+<div class="info" id="coords"></div>
+<div class="info" id="condition"></div>
+
+<div class="update-container">
+    <div id="updatedTime">Updated: --:--:--</div>
+    <button id="refreshBtn">⟳</button>
+</div>
+
+<div class="interval-controls">
+    <button id="decreaseInterval" class="small-btn">▼</button>
+    <span id="intervalDisplay">60s</span>
+    <button id="increaseInterval" class="small-btn">▲</button>
+</div>
+
+<div style="margin-top:15px; font-size:0.9rem;">APP-BY-JEET</div>
 
 <script>
-const API_KEY = "679bddf7884949109fa193814251408";
-let refreshInterval = 60;
-let intervalTimer;
+const API_KEY = "679bddf7884949109fa193814251408"; // your key
+let refreshInterval = 60; // seconds
+let autoRefreshTimer;
 
-function updateTimeDisplay() {
-    document.getElementById('intervalDisplay').innerText = refreshInterval + "s";
-}
-
-function changeInterval(change) {
-    refreshInterval = Math.max(10, refreshInterval + change);
-    updateTimeDisplay();
-    startAutoRefresh();
-}
-
-function startAutoRefresh() {
-    if (intervalTimer) clearInterval(intervalTimer);
-    intervalTimer = setInterval(fetchWeather, refreshInterval * 1000);
+function getAqiCategory(aqi) {
+    if (aqi <= 50) return "Good";
+    if (aqi <= 100) return "Moderate";
+    if (aqi <= 150) return "Unhealthy for Sensitive Groups";
+    if (aqi <= 200) return "Unhealthy";
+    if (aqi <= 300) return "Very Unhealthy";
+    return "Hazardous";
 }
 
 function fetchWeather() {
-    if (!navigator.geolocation) {
-        alert("Geolocation not supported");
-        return;
-    }
     navigator.geolocation.getCurrentPosition(pos => {
-        const lat = pos.coords.latitude.toFixed(4);
-        const lon = pos.coords.longitude.toFixed(4);
-        fetch(`https://api.weatherapi.com/v1/current.json?key=${API_KEY}&q=${lat},${lon}&aqi=no`)
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
+
+        fetch(`https://api.weatherapi.com/v1/current.json?key=${API_KEY}&q=${lat},${lon}&aqi=yes`)
             .then(res => res.json())
             .then(data => {
                 document.getElementById('location').innerText = data.location.name + ", " + data.location.region;
                 document.getElementById('temperature').innerText = data.current.temp_c + " °C";
                 document.getElementById('coords').innerText = `Latitude: ${lat}, Longitude: ${lon}`;
                 document.getElementById('condition').innerText = data.current.condition.text;
+
+                // Humidity and AQI in one line
+                let humidity = data.current.humidity;
+                let aqiValue = data.current.air_quality["pm2_5"];
+                let aqiCategory = getAqiCategory(aqiValue);
+                document.getElementById('humidityAqi').innerText = `Humidity: ${humidity}% | AQI: ${aqiValue.toFixed(1)} (${aqiCategory})`;
+
+                // Update time
                 const now = new Date();
                 document.getElementById('updatedTime').innerText = "Updated: " + now.toLocaleTimeString();
             })
@@ -128,7 +123,25 @@ function fetchWeather() {
     });
 }
 
-updateTimeDisplay();
+function startAutoRefresh() {
+    clearInterval(autoRefreshTimer);
+    autoRefreshTimer = setInterval(fetchWeather, refreshInterval * 1000);
+}
+
+document.getElementById('refreshBtn').addEventListener('click', fetchWeather);
+document.getElementById('increaseInterval').addEventListener('click', () => {
+    refreshInterval += 10;
+    document.getElementById('intervalDisplay').innerText = refreshInterval + "s";
+    startAutoRefresh();
+});
+document.getElementById('decreaseInterval').addEventListener('click', () => {
+    if (refreshInterval > 10) {
+        refreshInterval -= 10;
+        document.getElementById('intervalDisplay').innerText = refreshInterval + "s";
+        startAutoRefresh();
+    }
+});
+
 fetchWeather();
 startAutoRefresh();
 </script>
